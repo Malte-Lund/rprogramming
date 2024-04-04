@@ -1,0 +1,719 @@
+---
+title: "rprogramminglecture2"
+format: html
+editor: visual
+---
+
+# Lecture 2
+
+## Flow Control and Loops
+
+```{r}
+warning("test!")
+options(digits = 2)
+set.seed(69420) #nice!
+
+#packages <- list("here","palmerpenguins","data.table","tidyverse","dplyr")
+#lapply(packages,FUN=install.packages) ## Knitting install.pacakges really doesnt work well.
+library("here")
+#lapply(packages, character.only=T,FUN=library)
+
+```
+
+Conditional execution:
+
+If (condition) { <operation> } Else if Else
+
+Flow Control:
+
+### Loops:
+
+#### repeat
+
+```{r repeat}
+n<-5
+iteration<-0
+repeat {
+  if (iteration == n){
+    rm(iteration)
+  break
+  } else {
+    print("hello")
+  iteration<-iteration+1}
+}
+n<-5
+iteration<-0
+repeat{
+  print("hello")
+  if (iteration==0)
+    {break}
+}
+```
+
+#### while
+
+```{r}
+i<-1
+n<-5
+while (i <= n){
+  print("hello")
+  i<-i+1
+}
+```
+
+#### for
+
+```{r}
+for(i in 1:5){
+  print ("hello")
+}
+
+fruit<- c("apples", "oranges", "lemons", "strawberrys","rocks")
+
+for (i in fruit){
+  if(i=="lemons") next
+  if(i=="rocks") {
+    print(paste(i, "aren't fruits you dummy"))
+    next
+  }
+  print(paste(i, "are delicious"))
+}
+
+for (i in 1:5){
+  if(i==2) next
+  print(paste("hello", i))
+}
+```
+
+```{r}
+library(palmerpenguins)
+
+species_names<-levels(penguins$species)
+mean_bill_length <- numeric(length(species_names))
+names(mean_bill_length)<- species_names
+
+for (this_species in species_names){
+  mean_bill_length[this_species]<-
+    mean(subset(penguins, species == this_species)$bill_length_mm,
+         na.rm=T)
+
+  }
+print(mean_bill_length)
+
+mean_bill_length<-NULL
+
+for (this_species in levels(penguins$species)){
+  mean_bill_length[this_species]<-
+    mean(subset(penguins, species == this_species)$bill_length_mm,
+         na.rm=T)
+  }
+```
+
+#### bootstrap
+
+```{r}
+n=2000
+mu.body_mass <- mean(penguins$body_mass_g, na.rm = T)
+bsmeans<-vector("numeric", length = n)
+for (i in 1:length(bsmeans)){
+  resampled.body_mass <- sample(penguins$body_mass_g, replace = T)
+  bsmeans[i]<-mean(resampled.body_mass, na.rm=T)
+}
+
+hist(bsmeans)
+quantile(bsmeans,c(0.025,0.975))
+```
+
+#### nested loops
+
+```{r}
+#TODO create an example of a nested loop
+```
+
+#### SPEEEEEED! The problem is increasing object size, for loops can be fast if you make the vector first.
+
+```{r}
+#TODO create an example of slow vs. fast code with the system.time() command
+```
+
+#Writing your own functions A Simple function (also not really a function as it doesn't do anything to the inputs)
+
+```{r}
+hello<- function(name, name2="Malte"){
+  paste("Hello", name, "meet", name2)
+}
+hello("Jim")
+```
+
+# Exercises
+
+Simple loops and conditional statements
+
+-   Use a loop to print every number from 1 to 10
+
+-   Modify the loop to print every even number from 1 to 10 (hint: add an if statement and use (i %% 2) == 0 to check whether i is divisible by 2).
+
+```{r}
+#numbers 1 to 10
+maximal_number <- 10
+numbers <- 1:maximal_number
+for (i in numbers){
+  print(i)
+}
+
+#next unless even
+for (i in numbers){
+  if((i %% 2) == 0 ){print(i)}
+    else{
+      next
+        }
+}
+```
+
+Loops for statistical analysis Load the palmerpenguins dataset:
+
+```{r}
+library(palmerpenguins)
+head(penguins)
+```
+
+###1 Write a loop 
+that calculates and prints out the mean for each numeric variable in the penguins dataset
+
+```{r}
+library(dplyr)
+#TODO check if the variable is numeric
+num.penguins_variables <- penguins %>% dplyr::select(where(is.numeric)) %>%as.list()
+#n<-length(num.penguins_variables)
+#out<-NULL
+#names.num.penguins_variables <- colnames(num.penguins_variables)
+#nona_mean <- function(x){
+#  mean(x,na.rm=T)
+#}
+
+#TODO calculate the mean
+#for (i in num.penguins_variables){
+#  out[i]<-
+#    mean(na.rm=T)
+#}
+#TODO print the mean
+#print(out)
+
+
+#penguins%>%select(colnames(num.penguins_variables)[2])%>%nona_mean()
+
+
+variables<- as.list(penguins)
+names(variables)
+list_mean<-colnames(variables)
+
+
+j <- 1
+k<-1
+means<-1:5
+for(i in variables){
+  if (is.numeric(i)){
+    means[j]<-mean(i, na.rm=T)
+    names(means)[j]<-names(variables)[k]
+    j <- j+1
+    }
+  k <- k+1
+}
+print(means)
+```
+
+### 2. Modify your loop 
+in 1 so that it prints out the mean, standard deviation, median, and interquartile range for each numeric variable in penguins.
+
+```{r}
+
+n <- 1:5
+variable <- penguins|>select_if(is.numeric)|>colnames()
+means<-1:5
+sd<-1:5
+median<-1:5
+lower_quartile<-1:5
+higher_quartile<-1:5
+results<-data.frame(n,variable,means,sd,median,lower_quartile,higher_quartile)
+
+for(n in results$n){
+    results$means[n] <- mean(
+      penguins[[which(colnames(penguins) == results$variable[n])]], 
+      na.rm = T)
+    results$sd[n] <- sd(
+      penguins[[which(colnames(penguins) == results$variable[n])]], 
+      na.rm = T)
+    results$median[n] <- median(
+      penguins[[which(colnames(penguins) == results$variable[n])]], 
+      na.rm = T)
+    results$lower_quartile[n] <- quantile(
+      penguins[[which(colnames(penguins) == results$variable[n])]], 
+      na.rm = T, probs = 0.25)
+    results$higher_quartile[n] <- quantile(
+      penguins[[which(colnames(penguins) == results$variable[n])]], 
+      na.rm = T, probs = 0.75)
+}
+print(results)
+
+```
+###3 Write a bootstrap loop 
+to compute 500 bootstrap replicates of the means of bill length, bill depth, and flipper length. Remember to pre-allocate a data structure to store the 500 times 3 values. Provide an estimate of the correlation of the sample means.
+
+```{r}
+n<-1:500
+bill.length.mean <- 1
+bill.depth.mean <- 1
+flipper.length.mean<- 1
+boot.data<-data.frame(n,bill.length.mean,bill.depth.mean,flipper.length.mean)
+
+for (n in boot.data$n) {
+  boot.data$bill.length.mean[n]<-sample(
+    x = penguins$bill_length_mm,
+    size = length(penguins$bill_length_mm),
+    replace = T)|>mean(na.rm=T)
+  
+  boot.data$bill.depth.mean[n]<-sample(
+    x = penguins$bill_depth_mm,
+    size = length(penguins$bill_depth_mm),replace = T)|>
+      mean(na.rm=T)
+  
+  boot.data$flipper.length.mean[n]<-sample(
+    penguins$flipper_length_mm,
+    size=length(penguins$flipper_length_mm),replace = T)|>
+    mean(na.rm=T)
+}
+print(boot.data)
+
+```
+
+###4 Write a loop 
+that contains an if then else statement that goes through the variables in penguins and replaces missing values with the mean for numeric double variables, and the most frequent value for characters or factors.
+Hints
+Use this function to calculate the mode in a way that returns the same data type.
+my_mode <- function(x) {
+  
+  converter <- get(paste0("as.", class(x)))
+  tab <- table(x) |> sort(decreasing = TRUE) 
+  names(tab)[1] |> converter()
+  
+}
+
+Inside the loop you will need to check whether the variable is of type “double”. Do this using the is.double function, which returns a TRUE or FALSE.
+To assign a new value m to only the missing elements of a vector x, you can do the following x[is.na(x)] <- m. Refer to the data structures lecture for information about indexing vectors
+```{r}
+penguins2<-penguins
+#penguins2$n<-rownames(penguins)
+penguins2.num.variables <- penguins2 %>% dplyr::select(where(is.numeric))
+penguins2.num.variables$imputed <- FALSE
+#penguins.num.var<-penguins|>select_if(is.numeric)|>colnames()
+
+#TODO a nested loop, going through each variable, n times.
+#  for (variable in penguins.num.var){
+ #   print(variable)
+  #  for (n in penguins2$n) {print(n)}
+
+    
+for(i in 1:ncol(penguins2.num.variables)){
+  penguins2.num.variables[is.na(penguins2.num.variables[,i]), i] <- 
+    mean(penguins2.num.variables[,i], na.rm = TRUE)
+}
+#Hmmm I can't get this working. I'll test it for a variable and then I'll try to make that into a loop, ok so if I index with double brackets I get a list, and then I can go to the i-th position of that list, so this should work: 
+
+for (variable in colnames(penguins2.num.variables)){
+  
+  for(i in 1:length(penguins2.num.variables[[variable]])){
+    
+    if (is.na(penguins2.num.variables[[variable]][i])){
+      
+      penguins2.num.variables[[variable]][i] <-
+        mean(penguins2.num.variables[[variable]],na.rm=T)
+      penguins2.num.variables$imputed[i] <- TRUE #make a note that this value is imputed
+    }
+  }        
+}
+
+penguins.imputed<- data.frame(penguins %>% dplyr::select(-where(is.numeric)),penguins2.num.variables)
+
+#Tada! - I also leave som deprecated code below so you can see the madness of my process
+      
+  #  for (n in penguins2$n) {
+      
+  #    if is.na(variable[n]){
+  #      variable[n] <- mean(variable,na.rm=T)
+  #    } else {
+  #      next
+  #      }
+  #     }
+  #    }
+
+```
+I see now that the task actually asked me to make a loop with an if/else statement that could determine whether it was numeric & double or whether it was something else, I'll try to edit my above code.
+*This gives errors because some of them are integers, which aren't double - we'll just change that*
+```{r}
+penguins2<-penguins
+str(penguins2)
+penguins2$flipper_length_mm<-as.numeric(penguins2$flipper_length_mm)
+penguins2$body_mass_g      <-as.numeric(penguins2$body_mass_g      )
+penguins2$year             <-as.numeric(penguins2$year             )
+penguins2$imputed <- " "
+str(penguins2)
+
+for (variable in colnames(penguins2)){
+  
+  for(i in 1:length(penguins2[[variable]])){
+    if (variable != "imputed"){ #we do not want to impute on the imputed variable, because that is silly
+      if (is.double(penguins2[[variable]])){#TODO return true if variable is double, return false if not  
+        if (is.na(penguins2[[variable]][i])){
+        
+          penguins2[[variable]][i] <-
+              mean(penguins2[[variable]],na.rm=T)
+          penguins2$imputed[i] <- paste(penguins2$imputed[i],"mean of",variable) #make a note that a value is imputed
+          } 
+    } else {
+        if(is.na(penguins2[[variable]][i])){
+              penguins2[[variable]][i] <-
+              names(which.max(table(penguins2[[variable]])))
+          penguins2$imputed[i] <- paste(penguins2$imputed[i],"most common of",variable) #make a note that a value is imputed
+        }
+      }
+    }
+  }        
+}
+
+penguins.imputed<-penguins2
+#and there we have it ïmputed by means, 
+
+
+```
+
+
+# Functions -- 
+##exercises Day 2, B
+
+Understanding how to create and use your own functions 
+
+Learning objectives In this lesson you will learn how the apply family of functions works, and the alternatives using dplyr and data.table Practice writing and reusing your own functions Iterating over data with functions
+
+###2.  Write a function 
+to compute the mean and standard deviation of a numeric vector. We will apply this function to the numeric variables in penguins, and also by different subgroups
+
+```{r}
+my_mean<-function(x){
+  my<-sum(x)/length(x)
+  print(my)}
+
+mean_sd<-function(x, na.rm=T){
+  my<-mean(x,na.rm=na.rm)
+  sd<-sd(x,na.rm=na.rm)
+  out<-data.frame(my,sd)
+  names(out)<-c("mean","standard deviation")
+  out
+}
+
+mean_sd(1:10)
+
+
+```
+Use your function to compute the mean and sd of body mass by species and sex
+
+```{r}
+penguins|>group_by(species,sex)|>summarize(mean_sd(body_mass_g))
+```
+
+Try using one of the apply functions
+```{r}
+lapply(
+  split(
+    penguins$body_mass_g, list(penguins$species,penguins$sex)
+  ),
+  FUN=mean_sd
+)
+```
+
+
+
+
+```{r}
+sapply(
+  split(
+    penguins$body_mass_g, list(penguins$species,penguins$sex)
+  ),
+  FUN=mean_sd
+)
+```
+
+```{r}
+#tapply(
+ # split(
+ #   penguins$body_mass_g, list(penguins$species,penguins$sex)
+#  ),
+#  FUN=mean_sd
+#)
+
+#I tried to mess around with INDEX a bit but didn't really make it work.
+```
+
+Stop and think What are the components of a function? Do I have to worry about missing data? How can I deal with it? What sort of data structure should I return? Using the function Use your function to compute the mean and sd of all the numeric variables in penguins. Use your function to compute the mean and sd of body mass by species and sex Try using one of the apply functions
+
+```{r}
+#So I usually use dplyr, but I guess it would look like this if I wanted to do it without
+
+lapply(split(penguins$body_mass_g, list(penguins$species, penguins$sex)),FUN=mean_sd)
+
+summary<-as.data.frame((lapply(split(penguins$body_mass_g, list(penguins$species, penguins$sex)),FUN=mean_sd)
+))
+
+summary
+
+library(dplyr) 
+summary.dplyr<-penguins %>%
+  dplyr::select(where(is.numeric)) %>%
+  as.list() %>%
+  lapply(mean_sd)%>%
+  as.data.frame() #TODO pivot this longer to get mean and SD in two rows. 
+
+```
+
+Try using data.table: use the .by argument in the 
+
+
+```{r}
+library(data.table)
+pengdt <- data.table(penguins)
+
+pengdt[, mean_sd(body_mass_g), by = list(species, sex)]
+## . can be used as shorthand for list in data table
+pengdt[, mean_sd(body_mass_g), by = .(species, sex)]
+
+pengdt[, mean_sd(body_mass_g), by = .(species, sex)]
+
+
+```
+
+##Classes and custom generics 
+Now that you have some functions to do something interesting, let's create a "class" to indicate that the object has a specific meaning.
+
+Modify your mean and sd function so that the data structure that is returned has class "meansd". There are two ways to do this:
+
+```{r}
+mean_sd<-function(x, na.rm=T){
+  my<-mean(x,na.rm=na.rm)
+  sd<-sd(x,na.rm=na.rm)
+  out<-list(my,sd)
+  names(out)<-c("mean","sd")
+  class(out)<-"meansd"
+  out
+}
+print.meansd<-NULL
+
+mean_sd(1:5)
+
+print.meansd <- function(x, dig = 2) {
+  
+  msd <- paste0(round(x[["mean"]], digits = dig), " (", 
+                round(x[["sd"]], digits = dig), ")")
+  
+  cat("mean (sd)", 
+      attr(x, "variable"), ":", 
+      msd, "\n")
+  
+}
+
+test<-1:10
+
+mean_sd(test)
+```
+##More functions
+Write another function that constructs a one-sample t-statistic from an estimated mean and standard deviation. Recall that the t-statistic to test the null hypothesis that 
+ is T = (X-bar - my0)/(sd/sqrt(n))
+X-bar is the sample mean and 
+sd is the sample standard deviation and 
+n is the sample size.
+
+```{r}
+Tscore <- function(x, my0=0){
+  n = length(x)
+  xbar = mean(x, na.rm=T)
+  sd = sd(x, na.rm=T)
+  
+  out = (xbar - my0)/(sd*sqrt(n))
+  names(out)<-"T-Score"
+  class(out)<-"Tsc"
+  out
+}
+
+
+
+print.Tsc <- function (x, digits = NULL, quote = TRUE, na.print = NULL, print.gap = NULL, 
+    right = FALSE, max = NULL, width = NULL, useSource = TRUE, 
+    ...) 
+{
+    args <- pairlist(digits = digits, quote = quote, na.print = na.print, 
+        print.gap = print.gap, right = right, max = max, width = width, 
+        useSource = useSource, ...)
+    missings <- c(missing(digits), missing(quote), missing(na.print), 
+        missing(print.gap), missing(right), missing(max), missing(width), 
+        missing(useSource))
+    .Internal(print.default(x, args, missings))
+}
+
+Tscore(test)[1]
+
+
+```
+Write another function that takes the t-statistic and calculates a p-value
+
+```{r}
+
+#TODO
+pt(q=Tscore(test)[1],df=length(test)-1, lower=F)
+
+
+pvalue <- function (q, df, ncp, lower.tail = TRUE, log.p = FALSE) 
+{
+    out=pt(q, df, ncp, lower.tail = TRUE, log.p = FALSE)
+    names(out)<-"p-value"
+    out
+}
+
+pvalue(q=Tscore(test)[1],df=length(test)-1, lower=F)
+```
+Compose your custom functions in order to test the null hypothesis that the mean body mass of penguins is 4000g. Try using the pipe operator |>.
+```{r}
+penguins$body_mass_g|>Tscore(my0=4000)|>pvalue(df=length(penguins$body_mass_g))
+
+t.test(penguins$body_mass_g,mu=4000)
+
+#So that's wrong, but I dont understand why. I can always just do:
+
+
+
+t.test
+
+my_t.test <- function(x,mu=0) {
+  t.test(x,mu=mu)[1]
+}
+
+penguins$body_mass_g|>my_t.test(mu=4000)|>as.numeric()|>pvalue(df=length(penguins$body_mass_g)-1)
+
+my_pvalue <- function (x, mu, ...){
+t.test(x,mu=mu,...)$p.value
+}
+
+penguins$body_mass_g|>my_pvalue(mu=4000)
+
+
+```
+# If you have time or on your own
+
+###1 Expand your class
+to include confidence interval and p-value calculation/printing. Check out the scales::pvalue function.
+
+```{r}
+scales::pvalue
+
+```
+
+Look at the t.test function. What type of object does this return?
+*It's a list with the class htest*
+```{r}
+t.test
+
+t.test.penguin.mass.eq.4000<-t.test(penguins$body_mass_g,mu=4000)
+str(t.test.penguin.mass.eq.4000)
+
+```
+
+Look at the print method for the class of the object returned by t.test, use the command stats:::print.htest to find the source. How does it work? How would you modify it?
+*I could modify it to print just $conf.int from the htest object, the structure can be seen above*
+
+```{r}
+stats:::print.htest
+
+my_print.htest <- function (x, digits = getOption("digits"), prefix = "\t", ...) 
+{
+    cat("\n")
+    cat(strwrap(x$method, prefix = prefix), sep = "\n")
+    cat("\n")
+    cat("data:  ", x$data.name, "\n", sep = "")
+    out <- character()
+    if (!is.null(x$statistic)) 
+        stat <- c(paste(names(x$statistic), "=", format(x$statistic, 
+            digits = max(1L, digits - 2L))))
+    if (!is.null(x$parameter)) 
+        param <- c(paste(names(x$parameter), "=", format(x$parameter, 
+            digits = max(1L, digits - 2L))))
+    if (!is.null(x$p.value)) {
+        fp <- format.pval(x$p.value, digits = max(1L, digits - 
+            3L))
+        p <- c(paste("p-value", if (startsWith(fp, "<")) fp else paste("=", 
+            fp)))
+    }
+    cat(strwrap(paste(out, collapse = ", ")), sep = "\n")
+    if (!is.null(x$alternative)) {
+        cat("alternative hypothesis: ")
+        if (!is.null(x$null.value)) {
+            if (length(x$null.value) == 1L) {
+                alt.char <- switch(x$alternative, two.sided = "not equal to", 
+                  less = "less than", greater = "greater than")
+                cat("true ", names(x$null.value), " is ", alt.char, 
+                  " ", x$null.value, "\n", sep = "")
+            }
+            else {
+                cat(x$alternative, "\nnull values:\n", sep = "")
+                print(x$null.value, digits = digits, ...)
+            }
+        }
+        else cat(x$alternative, "\n", sep = "")
+    }
+    if (!is.null(x$conf.int)) {
+       conf<- cat(format(100 * attr(x$conf.int, "conf.level")), " percent confidence interval:\n", 
+            " ", paste(format(x$conf.int[1:2], digits = digits), 
+                collapse = " "), "\n", sep = "")
+    }
+    if (!is.null(x$estimate)) {
+        cat("sample estimates:\n")
+        print(x$estimate, digits = digits, ...)
+    }
+    cat("\n", "cat","\n")
+    cat(paste(p,conf))
+    cat("\n",conf)
+    invisible(x)
+}
+
+my_print.htest(t.test.penguin.mass.eq.4000)
+
+
+#Ok let's do something simpler and just refer to specific parts of the object
+my_print2.htest<-function(x, digits=2,pdigits=7,...){
+  cat("method:",x[["method"]],"\n")
+  cat("alternative hypothesis:",x[["alternative"]],"\n")
+  cat("the p-value that this is equal to",round(x[["null.value"]],digits),"is",round(x[["p.value"]],pdigits),"\n")
+  cat("mean is", round(x[["estimate"]],digits),"\n")
+  cat(100*round(attr(x[["conf.int"]],which="conf.level"),digits),"%",
+      "confidence is",round(x[["conf.int"]][1],digits),"to",round(x[["conf.int"]][2],digits))
+}
+
+my_print2.htest(t.test.penguin.mass.eq.4000,digits=5,pdigits=7)
+
+my_print2.htest(t.test(penguins2$body_mass_g,mu=4150)) #imputed data set has different conf.ints so I just checked to see whether it would return something different.
+
+
+```
+
+Are there any other methods are available for that class? Use the methods function to find out. What would be another useful method for this class?
+
+```{r}
+methods
+
+library(stats)
+
+methods(generic.function=print, class = "htest")
+
+methods(generic.function=print, class = "htest")[131]
+
+methods(class = "htest")
+#I can only see print for the htest class?
+
+```
+

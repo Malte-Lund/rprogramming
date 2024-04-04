@@ -1,0 +1,204 @@
+---
+title: "R programming course lecture 1"
+format: html
+editor: visual
+theme: cyborg
+execute:
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+## Dynamic Documents
+
+Is a file that contains both *code* and *prose*.
+
+This was developed by **Donald Knuth** in the 1980s. "concentrate on explaining to humans what we want the computer to do".
+
+-   this document can have lists.
+    -   and they can be nested.
+-   I guess this will look okay?
+
+```{r}
+warning("test!")
+options(digits = 2)
+set.seed(69420) #nice!
+
+packages <- list("here","palmerpenguins","data.table","tidyverse","dplyr")
+#lapply(packages,FUN=install.packages) ## Knitting install.pacakges really doesnt work well.
+library("here")
+lapply(packages, character.only=T,FUN=library)
+
+```
+
+I don't really understand what Echo: Fenced does so I print this twice with/without it
+
+```{r}
+#| echo: fenced
+print("this is fenced")
+```
+
+```{r}
+print("this is NOT fenced")
+```
+
+Testing out Quarto In Rstudio, click on "New" and then "Quarto document". Give it a name, and choose an output format (the format that you will view the rendered document in). Add a title, insert a code chunk, and write some prose. Example: print out the first six rows of the palmerpenguins dataset.
+
+```{r install palmer penguins}
+#install.packages()
+penguindata<-data(package = 'palmerpenguins')
+data(package = 'palmerpenguins')
+head(palmerpenguins::penguins, rows=6)
+```
+
+Experiment with changing the yaml header options, click on Render again and see what changes. Example, if you are using the html output format, try changing the theme. Experiment with changing one of the code chunks in the document, Re-render and see what changes.
+
+## Next steps:
+
+## **Vectors and matrices**
+
+The following code creates a matrix with some integers:
+
+```{r}
+M1 <- matrix(1:16, nrow = 4, ncol = 4)
+as_tibble(M1)
+```
+
+1.  Take the sum of each row of M1
+
+```{r}
+library(tidyverse)
+library(dplyr)
+M1%>%rowSums()
+```
+
+`r M1%>%rowSums()`
+
+2.  Create a new matrix called `M2` that is `M1` with the diagonal elements replaced by 0s
+
+```{r}
+M2 <- M1 
+diag(M2) <- 0
+
+as_tibble(M2)
+```
+
+3.  Create a new matrix called `M3` that is `M1` but with all values less than 4 replaced by -1
+
+```{r}
+M3 <- M1
+M3[M3<4]<- -1
+
+as_tibble(M3)
+```
+
+4.  Append the three matrices into an array with dimensions 4, 4, 3.
+
+```{r}
+A1<-array(data=c(M1,
+                 M2,
+                 M3)
+          ,dim=c(4,
+                 4,
+                 3))
+A1
+```
+
+##Organizing output from a statistical analysis
+
+The Palmer penguins data are available in the package palmerpenguins. Install the package and inspect the data called palmerpenguins. You can read about the data in the help file:
+
+```{r}
+head(palmerpenguins::penguins)
+```
+
+Let's do some basic analyses on this dataset.
+
+```{r}
+massfit <- lm(body_mass_g ~ sex * species, data = penguins)
+summary(massfit)
+
+by(penguins$body_mass_g, list(penguins$sex, penguins$species), summary)
+
+boxplot(body_mass_g ~ sex * species, data = penguins, 
+        col = rep(c("slateblue", "salmon"), 3))
+legend("topleft", fill = c("slateblue", "salmon"), 
+       legend = c("Female", "Male"))
+
+```
+
+Inspect the massfit object. What type of data structure is it, and what does it contain?
+
+```{r}
+str(massfit)
+saveRDS(massfit,file=here("output/models/lm_massfit.rds"))
+
+```
+
+*massfit is a list, it contains 14 objects, these objects come from the linear model specified by lm model*
+
+You are planning a publication about the association/interaction between species and sex on body mass. The paper will include descriptive statistics, statistical inference, and some figures. You will likely present the results at a conference or in a lab meeting.
+
+```{r}
+library(ggplot2)
+box.plot.penguins<-penguins%>%ggplot(aes(x=species, y=body_mass_g, fill=sex))+
+  geom_boxplot()
+
+point.plot.penguins<-penguins%>%ggplot(aes(x=species, y=body_mass_g, colour=sex))+
+  geom_point()
+
+violin.plot.penguins<-penguins%>%ggplot(aes(x=species, y=body_mass_g, fill=sex)) + 
+  geom_violin() +
+  geom_jitter(shape=16, position=position_jitter(0.1), aes(color=sex))
+
+library(here)
+
+
+ggsave(
+  filename=paste(
+    "box.plot.penguins",
+    ".jpg"
+  ),
+  path=paste0(here(),
+    "/output/graphs"),
+  plot=box.plot.penguins,
+  device="jpeg"
+)
+
+ggsave(
+  filename=paste(
+    "point.plot.penguins",
+    ".jpg"
+  ),
+  path=paste0(here(),
+    "/output/graphs"),
+  plot=point.plot.penguins,
+  device="jpeg"
+)
+
+ggsave(
+  filename=paste(
+    "violin.plot.penguins",
+    ".jpg"
+  ),
+  path=paste0(here(),
+    "/output/graphs"),
+  plot=violin.plot.penguins,
+  device="jpeg"
+)
+
+point.plot.penguins
+box.plot.penguins
+violin.plot.penguins
+
+
+```
+
+What are some different approaches to save the results?
+
+Discuss the pros and cons of your suggested approaches. Stop and think How do you plan to use the statistical output, immediately and in the future? Thinking about this question helps guide what and how I will store output from an analysis.
+
+Will I read the data into another program before putting it into tables for my paper? Is it a result of a computation that takes a long time to run that will be used in subsequent analyses? What about figures?
+
+*I generally use ggsave to save graphics, preferably as .svg, .pdf or .jpg files for other objects they are saved with saveRDS if I need to work on them again, if I need to present it, I generally save the summary as a data.frame with writexl* *Alternatively we could just save the code to make it - which works untill the code to generate data takes too long to run, I did a hobby project with sampling dice rolls and since some of the dice rolls required to basically roll Yathzee (so chances are 1 / (6\^6) =* `r round(1/(6^6),7)` *) so I needed to roll basically a million dice (using a loop and sample(1:6)), rerunning the code took 30 minutes, so I saved the dice rolls using saveRDS()*

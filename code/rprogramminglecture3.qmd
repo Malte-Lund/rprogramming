@@ -1,0 +1,359 @@
+---
+title: "R programming course lecture 3"
+format: html
+editor: visual
+theme: cyborg
+execute:
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+Load packages
+
+```{r}
+library(here)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(palmerpenguins)
+```
+
+# Strings & dates
+
+`r sprintf("this is an introduction of how to print strings and dates" )`
+
+###Combining strings Below is the example from the lecture on how to combine strings, it uses the % sign to combine the next terms.
+
+These examples are included for reference in case I need them later I can refer to this code.
+
+```{r}
+text.mean.sd<-"mean and sd of %s: %.2f (%.2f)"
+text.mean.sd%>%sprintf( "bill depth (mm)", 
+        mean(penguins$bill_depth_mm, na.rm = TRUE), 
+        sd(penguins$bill_depth_mm, na.rm = TRUE))
+rm(text.mean.sd)
+
+sprintf("n and percent male: %.0f (%.1f%%)", 
+        sum(penguins$sex == "male", na.rm = TRUE), 
+        100 * sum(penguins$sex == "male", na.rm = TRUE) / nrow(penguins) )
+```
+
+There's a glue package that can also do this
+
+```{r}
+#install.packages("glue")
+library(glue)
+
+glue("n and percent male: {round(nmale)} ({round(percentmale, 1)}%)", 
+        nmale = sum(penguins$sex == "male", na.rm = TRUE), 
+        percentmale = 100 * sum(penguins$sex == "male", na.rm = TRUE) / nrow(penguins))
+
+penguins |> group_by(species) |> 
+  summarize(mean_bill = mean(bill_length_mm, na.rm = TRUE),
+            sd_bill = sd(bill_length_mm, na.rm =T)) |>
+  glue_data("The mean (sd) bill length for {species} is {round(mean_bill, 1)} ({round(sd_bill,1)})mm")
+
+#Equivalent variance?? (No I made a mistake in the code, but I checked like this below)
+library(ggplot2)
+
+
+penguins |> ggplot(aes(x=bill_length_mm))+geom_histogram(aes(fill=species))
+penguins |> group_by(species) |> summarize(sd = sd (bill_length_mm, na.rm=T))
+
+```
+
+###Regular Expressions
+
+
+Get help Regexps can be very complex, but for simple patterns they can save you time
+
+Write and double-check your pattern:
+
+The cheatsheet on strings and regular expressions R 4 Data Science, chapter on regular expressions https://regex101.com/
+
+
+#Exercise 3A
+
+```{r}
+
+med2005 <- readRDS(here("data", "med-2005-ex.rds"))
+here()
+library(lubridate)
+lpr<-readRDS(here("data","lpr-ex.rds"))
+  #readRDS("C:/Users/mada0011/Desktop/R fra KU GUEST/rprogramming/data/lpr-ex.rds") #
+  
+
+
+str(lpr)
+```
+
+Select from lpr and pivot wider
+
+```{r}
+lpr |> select(pid, age, sex, visit, hdia)|>
+  pivot_wider(
+      names_from = visit,
+      values_from = hdia,
+      names_prefix = "visit_"
+  )
+
+#part 2
+
+lprlong <-lpr |>pivot_longer(cols = hdia:diag6,
+  names_to = "diag_type",
+  values_to = "all_diag",
+  values_drop_na = T)|>
+  mutate(main_diag = diag_type == "hdia") 
+
+lprlong<-lprlong|>
+  group_by(pid)|>
+  mutate(d15_diag = 
+                  all_diag %in% c("D150","D152","D159") & 
+                  indat <= as.Date("2010-01-01")
+         ) #this doesn't work. I misses multiple individuals. Maybe removing the group_by can solve it?
+
+lprlong<-lprlong|>
+  mutate(d15_diag = case_when(
+    all_diag == "D150" &
+      indat < ymd("2010-01-01") ~ T,
+    all_diag == "D152" &
+      indat < ymd("2010-01-01") ~ T,
+    all_diag == "D159" &
+      indat < ymd("2010-01-01") ~ T,
+    T~F)) #this doesn't work either ... 
+
+#ok let's break it into smaller steps.
+
+lpr.only.d15<-lprlong|>filter(
+  all_diag %in% c("D150","D152","D159")
+)
+
+lpr.only.d15|>mutate(
+  d15_diag = case_when(
+    indat < ymd("2010-01-01") ~T,
+    T ~ F
+  )
+)
+#Ok, I just realized that the original approach did work, none of the others were before 2010-01-01 
+#no need to merge back in then.
+
+
+```
+
+Iterate loading in RDS data
+
+```{r}
+med<-list(2005:2010)
+for (i in 2005:2010){
+  drugi<-
+    readRDS(here(paste0( "data/","med-",i,"-ex.rds")))
+  med[[i - 2005 +1]]<-drugi
+}
+
+drugs<-do.call(rbind,med)
+
+```
+
+##Merging and manipulation 
+The objective of this project is to describe the distribution of the number of days between hospitalizations and drug dispensations by age and sex. Your challenge is to do the following: 
+###Dates
+
+```{r}
+#install.packages(lubridate)
+library(lubridate)
+```
+
+### Dates and character strings -- exercises
+
+1.  Use the lubridate package (try the function wday) to calculate the day of the week when the dispensation occurred. Do dispensations occur less frequently on weekends?
+
+2.  Calculate the month of the dispensation. Is there a seasonal trend on the number of dispensations?
+
+```{r}
+drugs<-drugs %>% mutate(weekday=factor(lubridate::wday(date)))
+drugs%>%ggplot(aes(x=as.numeric(weekday)))+geom_histogram()
+lm.dose.wkday<-lm(dose~weekday,data=drugs)
+summary(lm.dose.wkday)
+
+#Can also be written with the native pipe
+
+drugs|>
+  lm(dose~weekday,data=_)|>
+  assign(x="lm.dose.wkday")|>
+  summary()
+
+drugs<-drugs %>% mutate(month=factor(lubridate::month(date)))
+drugs%>%ggplot(aes(x=as.numeric(month)))+geom_histogram()
+
+drugs|>
+  lm(dose~month,data=_)|>
+  assign(x="lm.dose.month")|>
+  summary()
+
+
+```
+
+*So in the 2005 set there does seem to be significantly fewer dispensations than the overall mean in June and July, however in the overall drugs data set there was no significant difference. There is no significant differences across the week.*
+
+3.  Use dplyr or data.table to create a new variable that is the last dispensation for each individual during the year (using group_by then mutate or := with by). Then calculate the number of days between each dispensation and the last one. What is the average number of days?
+
+```{r}
+drugs<-drugs |>
+  mutate(year=factor(lubridate::year(date)))|>
+  group_by(pid,year)|>mutate(
+  last_dispensation = max(date)
+)|>mutate(
+  time_to_last_disp = last_dispensation - date
+)
+
+mean(drugs$time_to_last_disp)
+
+```
+
+What is the average number of days? `{r} mean(drugs$time_to_last_disp)`
+
+# Exercise 3b
+
+## **Tidying our mean sd function**
+
+Load the `broom` package and look at the source code for `tidy.lm`
+
+```{r}
+library(broom)
+broom:::tidy.lm
+```
+
+
+
+Tidy mean SD function
+
+```{r}
+test_vector<-1:10
+
+mean_sd <- function(x, na.rm = TRUE) {
+  return <- data.frame(mean = mean(x, na.rm = na.rm), 
+           sd = sd(x, na.rm = na.rm))
+
+  structure(return, 
+            class = "meansd", 
+            variable = deparse1(substitute(x))
+            )
+}
+
+print.meansd <- function(x, ...) {
+  sprintf("%s has mean (sd): %.2f (%.2f)", 
+
+          attr(x, "variable"), 
+          x$mean, x$sd) |> 
+    cat()
+}
+
+mean_sd(test_vector)
+```
+
+tidy method
+
+```{r}
+mean_sd(penguins$bill_depth_mm)
+
+# Write a tidy method for our mean_sd function and try it out on the penguins dataset.
+
+tidy.meansd <- function(x, ...) {
+
+  
+
+  data.frame(variable = attr(x, "variable"), 
+
+             mean = x$mean, 
+
+             sd = x$sd
+
+             )
+
+  
+
+}
+
+tmp <- mean_sd(penguins$bill_depth_mm)
+
+tidy(tmp)
+
+
+```
+
+Sum table with penguins
+
+```{r}
+
+sumtab1 <- penguins |> group_by(species, sex) |> 
+
+  summarize(tidy(mean_sd(body_mass_g)))
+
+sumtab1 |> pivot_wider(names_from = sex, values_from = c(mean, sd))
+```
+
+#Merging and manipulation
+
+Import and merge the drug register data with the hospitalization register.
+
+```{r}
+
+lpr<-lpr|>mutate(indat=ymd(indat)) 
+drugs <- drugs |> mutate(date=ymd(date))
+
+lpr.drugs<-lpr|>select(pid:hdia)|>
+  left_join(drugs, by =
+              join_by(pid, indat < date))
+
+```
+
+Create a new variable that counts the number of drug dispensations in the 3 months (*I chose this as 90 days*) following a hospitalization.
+
+```{r}
+drugsummary<-lpr.drugs|>
+  filter(as.numeric(date-indat)<90|is.na(date))|>
+  group_by(pid,visit)|>
+  summarize(
+    age=age[1],
+    sex=sex[1],
+    indat=indat[1],
+    n_drugs=as.integer(sum(!is.na(atc)))
+)
+```
+
+Summarize the variable by age and sex. Try making a graphical summary .
+
+*let's take a look at a scatterplot*
+
+```{r}
+library(ggplot2)
+base<-drugsummary |> ggplot(aes(x=age,y=n_drugs,colour=sex, group=pid))
+base+geom_point()+geom_line()
+
+
+base2<-drugsummary|>ungroup() |> ggplot(aes(x=pid,y=age,colour=sex, group=pid))
+base2+geom_point()
+```
+
+This is a very confusing variable to work with. All women are older than men, there's only like 10 different ages possible. Age doesn't change within ID. Maybe a lmer with random effect of pid can be useful?
+
+```{r}
+
+library(lme4)
+model.lme<-lmer(n_drugs~age+sex+(1|pid),data=drugsummary)
+summary(model.lme)
+library(car)
+Anova(model.lme)
+
+n_drugs.summary<-drugsummary|>
+  group_by(pid)|>summarize(
+  mean_drugs=mean(n_drugs,na.rm=T),
+  sd_drugs=sd(n_drugs,na.rm=T),
+  sex=sex,
+  age=age
+)
+
+n_drugs.summary |>ggplot(aes(x=age,y=mean_drugs,color=sex))+ geom_point()
+
+```

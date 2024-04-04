@@ -1,0 +1,165 @@
+---
+title: "Rprogramming lecture 4"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+# Graphics in R 
+
+Packages
+```{r}
+library(ggplot2)
+library(palmerpenguins)
+library(dplyr)
+library(tidyr)
+```
+
+
+## 1. Base Graphics Is in fact a package
+
+### 2. The Grid System ggplot2 and lattice use this.
+
+```{r}
+palette()
+```
+
+### Choosing a palette
+
+```{r}
+#install.packages("colorspace")
+library(colorspace)
+#vignette("colorspace")
+```
+
+```{r}
+
+
+step1 <- penguins|> ggplot(aes(x=body_mass_g, y=bill_length_mm, color = species))
+
+step2 <- step1+geom_point()
+step2 + scale_color_brewer("Species",type="qual")
+
+step2 
+
+```
+
+### Themes
+
+```{r}
+mytheme <- theme(strip.background = element_rect(fill = "steelblue"), 
+        plot.background = element_rect(fill = "grey81"), 
+        legend.background = element_rect(fill = NA), 
+        legend.position = "bottom"
+        ) 
+
+ggplot(penguins, aes(x = body_mass_g, y = bill_length_mm, color = species)) + 
+  geom_point() + facet_wrap(~ year) + mytheme
+
+theme_set(theme_bw())
+ggplot(penguins, aes(x = body_mass_g, y = bill_length_mm, color = species)) + 
+  geom_point() + facet_wrap(~ year) + mytheme
+
+my_fulltheme <- theme_grey() + mytheme
+
+
+```
+
+To make a fully custom theme, start with an existing one, and modify it
+
+```{r}
+ggplot(penguins, aes(x = body_mass_g, y = bill_length_mm, color = species)) + 
+  geom_point() + facet_wrap(~ year) + my_fulltheme
+```
+
+Save your favorite color scales as a function for easy reuse. Use discrete_scale or continuous_scale.
+
+```{r}
+my_qual_scale <- function(...) {
+  discrete_scale("color", scale_name = "OI", 
+                 palette = function(x) {
+                   res <- palette.colors(x, "Okabe-Ito")[1:x]
+                   names(res) <- NULL
+                   res
+                 }, ...)
+}
+
+ggplot(penguins, aes(x = body_mass_g, y = bill_length_mm, color = species)) + 
+  geom_point() + facet_wrap(~ year) + my_fulltheme + my_qual_scale()
+```
+## Plot Addition
+
+Adding elements to a plot
+
+Starting with this example from the lecture:
+
+```{r}
+plotbm <- ggplot(penguins, aes(x = species, y = body_mass_g, fill=species, col=species)) + geom_jitter()
+plotbm
+```
+###patchwork - for concotonating plots
+```{r}
+library(patchwork)
+
+(plotbm+step2)/step1
+```
+
+###Plotly - interactive plots
+
+```{r}
+library(plotly)
+
+ggplotly(step2 + facet_wrap(~year))
+```
+
+### 1 - Add solid horizontal lines at the mean of each species.
+
+```{r}
+#This is the simplest way, but is not that editable:
+plotbm+
+  stat_summary(fun.y = "mean", geom = "point", shape = 23, size = 3, fill = "hotpink") #The geom is supposed to be editable, but segment, abline or anything like that doesn't work
+
+
+penguins.summaries<-penguins|>group_by(species)|>summarize(
+  mean_body_mass_g = mean(body_mass_g,na.rm = T),
+  sd_body_mass_g = sd(body_mass_g,na.rm = T),
+  median_body_mass_g = median(body_mass_g,na.rm=T))
+
+  
+plotbm+  
+  geom_segment(data=penguins.summaries,
+               aes(y=mean_body_mass_g,
+                   x=species,
+                   color=species,
+                   xend=species,
+                   yend=mean_body_mass_g))
+#WHAT THE %>!"# IS XEND AND YEND!!?
+
+
+
+
+```
+
+### 2 - Add dotted horizontal lines at the median of each species.
+```{r}
+
+plotbm+
+  geom_hline(
+    aes(yintercept=penguins.summaries[["median_body_mass_g"]][1], 
+        x=species[1], col=species[1], fill=species[1])
+  )+geom_hline(
+    aes(yintercept=penguins.summaries[["median_body_mass_g"]][2], 
+        x=species[2], col=species[2], fill=species[2])
+  )+geom_hline(
+    aes(yintercept=penguins.summaries[["median_body_mass_g"]][3], 
+        x=species[3], col=species[3], fill=species[3])
+  )
+#Okay I think I'm pretty close. I'm quite pressed for time today so I wont finish this, I think I get the idea of ggplot
+
+```
+
+### 3 . (For keeners) Create a reusable component 
+That adds the mean and median lines to a jitter plot. Try it out on a different plot, e.g., sex versus bill length
+*I am too pressed for time to do this, but I see that it would be a function that you could add to a ggplot.*
+
